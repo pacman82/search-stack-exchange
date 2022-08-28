@@ -1,0 +1,15 @@
+[package]
+name = "search-stack-exchange"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+quick-xml = "0.24.0"
+thiserror = "1.0.32"
+
+[dev-dependencies]
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
