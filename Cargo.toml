@@ -5,6 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
+atoi = "1.0.0"
 quick-xml = "0.24.0"
 thiserror = "1.0.32"
 
