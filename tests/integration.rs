@@ -6,10 +6,6 @@ fn find_similar_question() {
     // Parse Post.xml from 3dprinting stackexchange dump. We choose the 3d printing dump, because it
     // is one of the smaller ones.
     let mut reader = PostReader::new("./tests/3dprinting.Posts.xml").unwrap();
-    // Xml Declaration event => ignore
-    let _declaration = reader.xml_reader.read_event_into(&mut reader.buf).unwrap();
-    // Start row collection event
-    let _start_rows = reader.xml_reader.read_event_into(&mut reader.buf).unwrap();
     // Self start row event
     let row_event = reader.xml_reader.read_event_into(&mut reader.buf).unwrap();
     // let row_event = reader.read_event_into(&mut buf).unwrap();
