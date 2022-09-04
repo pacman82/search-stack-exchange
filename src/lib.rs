@@ -1,5 +1,11 @@
 use atoi::FromRadix10;
-use quick_xml::{events::{Event, attributes::{Attribute, AttrError}}, Reader};
+use quick_xml::{
+    events::{
+        attributes::{AttrError, Attribute},
+        Event,
+    },
+    Reader,
+};
 use std::{
     fs::File,
     io::{self, BufReader},
@@ -20,9 +26,9 @@ pub enum Error {
 /// Parses Stack Exchange Post XMLs
 pub struct PostReader {
     /// We reuse the same piece of memory to read all the events into.
-    pub buf: Vec<u8>,
+    buf: Vec<u8>,
     /// XML reader is placed on the first row, after construction
-    pub xml_reader: Reader<BufReader<File>>,
+    xml_reader: Reader<BufReader<File>>,
 }
 
 impl PostReader {
@@ -87,31 +93,44 @@ impl PostReader {
     }
 }
 
-pub enum Post
-{
-    Question { id: u64},
+pub enum Post {
+    Question { id: u64, title: String },
     Other,
 }
 
 impl Post {
-    fn from_attributes<'a>(attributes: impl Iterator<Item = Result<Attribute<'a>, AttrError>>) -> Result<Self, Error> {
+    fn from_attributes<'a>(
+        attributes: impl Iterator<Item = Result<Attribute<'a>, AttrError>>,
+    ) -> Result<Self, Error> {
         let mut id = None;
         let mut post_type_id = None;
+        let mut title = None;
 
         for attr in attributes {
             let attr = attr?;
             match attr.key.into_inner() {
                 b"Id" => id = Some(attr.value),
                 b"PostTypeId" => post_type_id = Some(attr.value),
+                b"Title" => title = Some(attr.value.clone()),
                 _ => (),
             }
         }
-        let post_type_id = post_type_id.ok_or_else(|| Error::InvalidXMLFormat("Missing post_type_id in Post".to_owned()))?;
+        let post_type_id = post_type_id
+            .ok_or_else(|| Error::InvalidXMLFormat("Missing post_type_id in Post".to_owned()))?;
         let post = match post_type_id.as_ref() {
             b"1" => {
-                let id = id.ok_or_else(|| Error::InvalidXMLFormat("Missing id in Post".to_owned()))?;
+                let id =
+                    id.ok_or_else(|| Error::InvalidXMLFormat("Missing id in Post".to_owned()))?;
                 let (id, _) = u64::from_radix_10(&id);
-                Post::Question { id }
+                let title = title.ok_or_else(|| {
+                    Error::InvalidXMLFormat("Missing title in Question".to_owned())
+                })?;
+                Post::Question {
+                    id,
+                    title: String::from_utf8(title.to_vec()).map_err(|_| {
+                        Error::InvalidXMLFormat("Expected UTF-8 encoding".to_owned())
+                    })?,
+                }
             }
             _ => Post::Other,
         };
