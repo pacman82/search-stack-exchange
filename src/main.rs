@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use aleph_alpha_client::{Client, Prompt, SemanticRepresentation, TaskSemanticEmbedding};
 use anyhow::Error;
 use clap::Parser;
-use search_stack_exchange::{Embeddings, Post, PostReader};
+use search_stack_exchange::{Embeddings, Embedding, Post, PostReader};
 
 /// Semantic Search on top of stack overflow
 #[derive(Parser)]
@@ -59,7 +59,7 @@ async fn main() -> Result<(), Error> {
                 .embedding;
 
             let index_title = title_embeddings
-                .find_most_similar(question_embedding.as_slice().try_into().unwrap());
+                .find_most_similar(&Embedding::try_from_slice(question_embedding)?);
 
             let best_title = &titles[index_title];
 

@@ -13,6 +13,8 @@ tokio = { version = "1.15.0", features = ["rt", "macros"] }
 quick-xml = "0.24.0"
 thiserror = "1.0.32"
 ordered-float = "3.0.0"
+serde_json = "1.0.85"
+serde = "1.0.144"
 
 [dev-dependencies]
 lazy_static = "1.4.0"

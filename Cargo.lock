@@ -808,6 +808,8 @@ dependencies = [
  "lazy_static",
  "ordered-float",
  "quick-xml",
+ "serde",
+ "serde_json",
  "thiserror",
  "tokio",
 ]

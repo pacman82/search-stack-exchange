@@ -1,8 +1,6 @@
-use std::convert::TryInto;
-
 use aleph_alpha_client::{Client, Prompt, SemanticRepresentation, TaskSemanticEmbedding};
 use lazy_static::lazy_static;
-use search_stack_exchange::{Embeddings, Post, PostReader};
+use search_stack_exchange::{Embeddings, Post, PostReader, Embedding};
 
 lazy_static! {
     static ref AA_API_TOKEN: String = std::env::var("AA_API_TOKEN")
@@ -58,8 +56,9 @@ async fn find_best_question() {
         .await
         .unwrap()
         .embedding;
+    let question = Embedding::try_from_slice(question).unwrap();
 
-    let pos_answer = title_embeddings.find_most_similar(question.as_slice().try_into().unwrap());
+    let pos_answer = title_embeddings.find_most_similar(&question);
     let best_question = &titles[pos_answer];
 
     // Then
