@@ -8,5 +8,7 @@ fn best_question() {
         "tests/small-posts.xml",
         "Is 3D Printing dangereous?",
     ])
+    .stdout()
+    .contains("Is 3D printing safe for your health?")
     .unwrap()
 }

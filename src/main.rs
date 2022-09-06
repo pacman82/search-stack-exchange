@@ -1,8 +1,9 @@
 use std::path::PathBuf;
 
+use aleph_alpha_client::{Client, Prompt, SemanticRepresentation, TaskSemanticEmbedding};
 use anyhow::Error;
 use clap::Parser;
-use search_stack_exchange::{PostReader, Post};
+use search_stack_exchange::{Embeddings, Post, PostReader};
 
 /// Semantic Search on top of stack overflow
 #[derive(Parser)]
@@ -29,18 +30,40 @@ struct TitleOpt {
     question: String,
 }
 
-fn main() -> Result<(), Error> {
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<(), Error> {
     let opt = Cli::parse();
 
     match opt.command {
         Command::Title { title_opt } => {
             let TitleOpt {
                 posts_xml,
-                question: _,
+                question,
             } = title_opt;
 
+            let api_token = std::env::var("AA_API_TOKEN")?;
+            let client = Client::new(&api_token)?;
             let titles = extract_titles(posts_xml)?;
-            
+            let title_embeddings =
+                Embeddings::from_texts(&client, titles.iter().map(|s| s.as_str())).await?;
+
+            let embed_question = TaskSemanticEmbedding {
+                prompt: Prompt::from_text(&question),
+                representation: SemanticRepresentation::Symmetric,
+                compress_to_size: Some(128),
+            };
+            let question_embedding = &client
+                .execute("luminous-base", &embed_question)
+                .await
+                .unwrap()
+                .embedding;
+
+            let index_title = title_embeddings
+                .find_most_similar(question_embedding.as_slice().try_into().unwrap());
+
+            let best_title = &titles[index_title];
+
+            println!("{best_title}")
         }
     }
     Ok(())
