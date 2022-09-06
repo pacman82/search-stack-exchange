@@ -6,11 +6,7 @@ use quick_xml::{
     },
     Reader,
 };
-use std::{
-    fs::File,
-    io::BufReader,
-    path::Path,
-};
+use std::{fs::File, io::BufReader, path::Path};
 
 use crate::Error;
 

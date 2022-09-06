@@ -35,7 +35,7 @@ fn main() -> Result<(), Error> {
         Command::Title { title_opt } => {
             let TitleOpt {
                 posts_xml: _,
-                question:_ ,
+                question: _,
             } = title_opt;
         }
     }

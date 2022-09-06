@@ -1,8 +1,7 @@
-use aleph_alpha_client::{
-    cosine_similarity, Client, Prompt, SemanticRepresentation, TaskSemanticEmbedding,
-};
+use std::convert::TryInto;
+
+use aleph_alpha_client::{Client, Prompt, SemanticRepresentation, TaskSemanticEmbedding};
 use lazy_static::lazy_static;
-use ordered_float::NotNan;
 use search_stack_exchange::{Embeddings, Post, PostReader};
 
 lazy_static! {
@@ -60,13 +59,7 @@ async fn find_best_question() {
         .unwrap()
         .embedding;
 
-    let (pos_answer, _similarity) = title_embeddings
-        .embeddings
-        .iter()
-        .map(|embedding| NotNan::new(cosine_similarity(embedding, question)).unwrap())
-        .enumerate()
-        .max_by_key(|(_index, similarity)| *similarity)
-        .unwrap();
+    let pos_answer = title_embeddings.find_most_similar(question.as_slice().try_into().unwrap());
     let best_question = &titles[pos_answer];
 
     // Then

@@ -1,13 +1,16 @@
-mod reader;
 mod error;
+mod reader;
 
-use aleph_alpha_client::{Client, TaskSemanticEmbedding, Prompt, SemanticRepresentation};
-pub use reader::{PostReader, Post};
+use aleph_alpha_client::{
+    cosine_similarity, Client, Prompt, SemanticRepresentation, TaskSemanticEmbedding,
+};
 pub use error::Error;
+use ordered_float::NotNan;
+pub use reader::{Post, PostReader};
 
 pub struct Embeddings {
     /// Store all 128 sized embeddings in contigious memory
-    pub embeddings: Vec<[f32; 128]>
+    pub embeddings: Vec<[f32; 128]>,
 }
 
 impl Embeddings {
@@ -15,11 +18,14 @@ impl Embeddings {
 
     pub fn new() -> Self {
         Self {
-            embeddings: Vec::new()
+            embeddings: Vec::new(),
         }
     }
 
-    pub async fn from_texts(client: &Client, facts: impl IntoIterator<Item = &'_ str>) -> Result<Self, Error> {
+    pub async fn from_texts(
+        client: &Client,
+        facts: impl IntoIterator<Item = &'_ str>,
+    ) -> Result<Self, Error> {
         let mut embeddings = Vec::new();
         for fact in facts {
             let task = TaskSemanticEmbedding {
@@ -34,9 +40,18 @@ impl Embeddings {
                 .embedding;
             embeddings.push(embedding.try_into().expect("Slice size must be 128"))
         }
-        Ok(Self {
-            embeddings,
-        })
+        Ok(Self { embeddings })
+    }
+
+    pub fn find_most_similar(&self, needle: &[f32; 128]) -> usize {
+        let (pos_answer, _similarity) = self
+            .embeddings
+            .iter()
+            .map(|embedding| NotNan::new(cosine_similarity(embedding, needle)).unwrap())
+            .enumerate()
+            .max_by_key(|(_index, similarity)| *similarity)
+            .unwrap();
+        pos_answer
     }
 }
 
