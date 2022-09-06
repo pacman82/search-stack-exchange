@@ -46,21 +46,9 @@ async fn find_best_question() {
             titles.push(title);
         }
     }
-    let mut title_embeddings = Embeddings::new();
-    for title in &titles {
-        let embedding_task = TaskSemanticEmbedding {
-            prompt: Prompt::from_text(title),
-            representation: SemanticRepresentation::Symmetric,
-            compress_to_size: Some(128),
-        };
-        let task_output = client
-            .execute("luminous-base", &embedding_task)
-            .await
-            .unwrap();
-        title_embeddings
-            .embeddings
-            .push(task_output.embedding.try_into().unwrap());
-    }
+    let title_embeddings = Embeddings::from_texts(&client, titles.iter().map(|s| s.as_str()))
+        .await
+        .unwrap();
     let embed_question = TaskSemanticEmbedding {
         prompt: Prompt::from_text(question),
         representation: SemanticRepresentation::Symmetric,

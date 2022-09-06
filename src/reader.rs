@@ -8,20 +8,11 @@ use quick_xml::{
 };
 use std::{
     fs::File,
-    io::{self, BufReader},
+    io::BufReader,
     path::Path,
 };
-use thiserror::Error;
 
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("Io error reading xml file")]
-    ReadXmlFile(#[source] io::Error),
-    #[error("Invalid xml format: {0}")]
-    InvalidXMLFormat(String),
-    #[error("XML input is malformed")]
-    MalformedXML(String),
-}
+use crate::Error;
 
 /// Parses Stack Exchange Post XMLs
 pub struct PostReader {
