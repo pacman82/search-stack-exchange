@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::Error;
 use clap::Parser;
+use search_stack_exchange::{PostReader, Post};
 
 /// Semantic Search on top of stack overflow
 #[derive(Parser)]
@@ -34,10 +35,24 @@ fn main() -> Result<(), Error> {
     match opt.command {
         Command::Title { title_opt } => {
             let TitleOpt {
-                posts_xml: _,
+                posts_xml,
                 question: _,
             } = title_opt;
+
+            let titles = extract_titles(posts_xml)?;
+            
         }
     }
     Ok(())
+}
+
+fn extract_titles(posts_xml: PathBuf) -> Result<Vec<String>, Error> {
+    let mut titles = Vec::new();
+    let mut reader = PostReader::new(posts_xml)?;
+    while let Some(post) = reader.next_post()? {
+        if let Post::Question { title, .. } = post {
+            titles.push(title);
+        }
+    }
+    Ok(titles)
 }

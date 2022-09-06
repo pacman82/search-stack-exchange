@@ -5,7 +5,7 @@ fn best_question() {
     Assert::command(&[
         "search-stack-exchange",
         "title",
-        "small-posts.xml",
+        "tests/small-posts.xml",
         "Is 3D Printing dangereous?",
     ])
     .unwrap()
