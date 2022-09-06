@@ -1,5 +1,6 @@
-use search_stack_exchange::{PostReader, Post};
+use aleph_alpha_client::{Client, Prompt, SemanticRepresentation, TaskSemanticEmbedding};
 use lazy_static::lazy_static;
+use search_stack_exchange::{Post, PostReader};
 
 lazy_static! {
     static ref AA_API_TOKEN: String = std::env::var("AA_API_TOKEN")
@@ -25,14 +26,37 @@ fn count_all_questions_in_3d_printing() {
     assert_eq!(4800, num_questions);
 }
 
-#[test]
-fn embed_all_questions_in_small_posts() {
+#[tokio::test]
+async fn embed_all_questions_in_small_posts() {
+    // Given
+    let client = Client::new(&AA_API_TOKEN).unwrap();
+    let posts = SMALL_POSTS;
+    let question = "Is 3D Printing dangereous?";
+
+    // When
+    let mut titles = Vec::new();
     // Parse Post.xml from 3dprinting stackexchange dump. We choose the 3d printing dump, because it
     // is one of the smaller ones.
-    let mut reader = PostReader::new(SMALL_POSTS).unwrap();
+    let mut reader = PostReader::new(posts).unwrap();
     while let Some(post) = reader.next_post().unwrap() {
         if let Post::Question { title, .. } = post {
             println!("{title}");
+            titles.push(title);
         }
     }
+    let mut title_embeddings = Vec::new();
+    for title in titles {
+        let embedding_task = TaskSemanticEmbedding {
+            prompt: Prompt::from_text(&title),
+            representation: SemanticRepresentation::Symmetric,
+            compress_to_size: Some(128),
+        };
+        let task_output = client
+            .execute("luminous-base", &embedding_task)
+            .await
+            .unwrap();
+        title_embeddings.push(task_output.embedding);
+    }
+
+    // Then
 }

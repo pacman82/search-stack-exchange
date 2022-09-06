@@ -11,6 +11,7 @@ quick-xml = "0.24.0"
 thiserror = "1.0.32"
 
 [dev-dependencies]
+tokio = { version = "1.15.0", features = ["rt", "macros"] }
 lazy_static = "1.4.0"
 
 
