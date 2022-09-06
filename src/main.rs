@@ -1,9 +1,13 @@
-use std::path::{PathBuf, Path};
+use std::{
+    fs::File,
+    io::{self, BufReader},
+    path::{Path, PathBuf},
+};
 
 use aleph_alpha_client::{Client, Prompt, SemanticRepresentation, TaskSemanticEmbedding};
 use anyhow::Error;
 use clap::Parser;
-use search_stack_exchange::{Embeddings, Embedding, Post, PostReader};
+use search_stack_exchange::{Embedding, Embeddings, Post, PostReader};
 
 /// Semantic Search on top of stack overflow
 #[derive(Parser)]
@@ -44,8 +48,23 @@ async fn main() -> Result<(), Error> {
             let api_token = std::env::var("AA_API_TOKEN")?;
             let client = Client::new(&api_token)?;
             let titles = extract_titles(&posts_xml)?;
-            let title_embeddings =
-                Embeddings::from_texts(&client, titles.iter().map(|s| s.as_str())).await?;
+
+            // Load embeddings if already calculated.
+            let mut embedding_path = posts_xml.to_owned();
+            embedding_path.set_extension("emb");
+            let embedding_cache = open_embedddings_cache(&embedding_path)?;
+            let title_embeddings = if let Some(cache) = embedding_cache {
+                eprintln!("Use cached embeddings");
+                Embeddings::from_reader_n(&mut BufReader::new(cache), titles.len())?
+            } else {
+                eprintln!("Generate embeddings");
+                // Generate embeddings
+                let embeddings = Embeddings::from_texts(&client, titles.iter().map(|s| s.as_str())).await?;
+                // Save them for the next time
+                let mut file = File::create(embedding_path)?;
+                embeddings.write(&mut file)?;
+                embeddings
+            };
 
             let embed_question = TaskSemanticEmbedding {
                 prompt: Prompt::from_text(&question),
@@ -58,8 +77,8 @@ async fn main() -> Result<(), Error> {
                 .unwrap()
                 .embedding;
 
-            let index_title = title_embeddings
-                .find_most_similar(&Embedding::try_from_slice(question_embedding)?);
+            let index_title =
+                title_embeddings.find_most_similar(&Embedding::try_from_slice(question_embedding)?);
 
             let best_title = &titles[index_title];
 
@@ -78,4 +97,17 @@ fn extract_titles(posts_xml: &Path) -> Result<Vec<String>, Error> {
         }
     }
     Ok(titles)
+}
+
+fn open_embedddings_cache(path: &Path) -> Result<Option<File>, io::Error> {
+    match File::open(path) {
+        Ok(file) => Ok(Some(file)),
+        Err(error) => {
+            if error.kind() == io::ErrorKind::NotFound {
+                Ok(None)
+            } else {
+                Err(error)
+            }
+        }
+    }
 }

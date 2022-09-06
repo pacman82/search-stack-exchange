@@ -1,10 +1,14 @@
-use std::{convert::TryInto, mem::size_of, io::{Write, self, BufRead}};
+use std::{
+    convert::TryInto,
+    io::{self, BufRead, Write},
+    mem::size_of,
+};
 
+use crate::Error;
 use aleph_alpha_client::{
     cosine_similarity, Client, Prompt, SemanticRepresentation, TaskSemanticEmbedding,
 };
 use ordered_float::NotNan;
-use crate::Error;
 
 pub const EMBEDDING_SIZE: usize = 128;
 
@@ -66,6 +70,12 @@ impl Embeddings {
         }
     }
 
+    pub fn from_reader_n(read: &mut impl BufRead, n: usize) -> Result<Self, io::Error> {
+        let mut embeddings = Self::new();
+        embeddings.read_n(read, n)?;
+        Ok(embeddings)
+    }
+
     pub fn from_vec(embeddings: Vec<Embedding>) -> Self {
         Self { embeddings }
     }
@@ -81,12 +91,18 @@ impl Embeddings {
                 representation: SemanticRepresentation::Symmetric,
                 compress_to_size: Some(EMBEDDING_SIZE as u32),
             };
-            let embedding = client
-                .execute(Self::MODEL, &task)
-                .await
-                .map_err(|e| Error::Embedding(e.to_string()))?
-                .embedding;
-            embeddings.push(Embedding::try_from_slice(&embedding)?)
+            let mut embedding = None;
+            while embedding.is_none() {
+                embedding = match client.execute(Self::MODEL, &task).await {
+                    Ok(output) => Some(output.embedding),
+                    Err(error) => match error {
+                        aleph_alpha_client::Error::TooManyRequests
+                        | aleph_alpha_client::Error::Busy => None,
+                        _ => return Err(Error::Embedding(error.to_string())),
+                    },
+                };
+            }
+            embeddings.push(Embedding::try_from_slice(&embedding.unwrap())?)
         }
         Ok(Self::from_vec(embeddings))
     }
@@ -140,7 +156,8 @@ mod tests {
 
     #[test]
     fn embedding_to_and_fro_bytes() {
-        let embedding = Embedding::try_from_slice(&(0..128).map(|i| i as f32).collect::<Vec<_>>()).unwrap();
+        let embedding =
+            Embedding::try_from_slice(&(0..128).map(|i| i as f32).collect::<Vec<_>>()).unwrap();
         let mut buf = [0u8; EMBEDDING_SIZE * size_of::<f32>()];
         embedding.write_to_bytes(&mut buf);
         let mut loaded = Embedding::new();
@@ -151,13 +168,13 @@ mod tests {
 
     #[test]
     fn multiple_embedding_to_and_fro_bytes() {
-        let embedding = Embedding::try_from_slice(&(0..128).map(|i| i as f32).collect::<Vec<_>>()).unwrap();
+        let embedding =
+            Embedding::try_from_slice(&(0..128).map(|i| i as f32).collect::<Vec<_>>()).unwrap();
+
         let embeddings = Embeddings::from_vec(vec![embedding, embedding]);
         let mut buf = Vec::new();
         embeddings.write(&mut buf).unwrap();
-
-        let mut loaded = Embeddings::new();
-        loaded.read_n(&mut Cursor::new(buf), 2).unwrap();
+        let loaded = Embeddings::from_reader_n(&mut Cursor::new(buf), 2).unwrap();
 
         assert_eq!(embeddings, loaded)
     }

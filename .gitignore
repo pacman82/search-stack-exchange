@@ -1,3 +1,6 @@
 /target
 
 .env
+
+# Cached embeddings
+*.emb
