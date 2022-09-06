@@ -1,4 +1,4 @@
-use std::{convert::TryInto, mem::size_of};
+use std::{convert::TryInto, mem::size_of, io::{Write, self, BufRead}};
 
 use aleph_alpha_client::{
     cosine_similarity, Client, Prompt, SemanticRepresentation, TaskSemanticEmbedding,
@@ -10,7 +10,7 @@ pub const EMBEDDING_SIZE: usize = 128;
 
 /// Embeddings encode meaning. They are high dimensional vectors those angles are used to determine
 /// similarity of different prompts.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Embedding(pub [f32; EMBEDDING_SIZE]);
 
 impl Embedding {
@@ -38,7 +38,7 @@ impl Embedding {
     }
 
     /// Load embedding from a binary buffer.
-    pub fn load_from_bytes(&mut self, buf: &[u8; EMBEDDING_SIZE * size_of::<f32>()]) {
+    pub fn read_from_bytes(&mut self, buf: &[u8; EMBEDDING_SIZE * size_of::<f32>()]) {
         for (bytes, float) in buf.chunks_exact(size_of::<f32>()).zip(&mut self.0) {
             *float = f32::from_le_bytes(bytes.try_into().unwrap());
         }
@@ -51,6 +51,7 @@ impl Default for Embedding {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Embeddings {
     /// Store all 128 sized embeddings in contigious memory
     embeddings: Vec<Embedding>,
@@ -63,6 +64,10 @@ impl Embeddings {
         Self {
             embeddings: Vec::new(),
         }
+    }
+
+    pub fn from_vec(embeddings: Vec<Embedding>) -> Self {
+        Self { embeddings }
     }
 
     pub async fn from_texts(
@@ -83,7 +88,7 @@ impl Embeddings {
                 .embedding;
             embeddings.push(Embedding::try_from_slice(&embedding)?)
         }
-        Ok(Self { embeddings })
+        Ok(Self::from_vec(embeddings))
     }
 
     pub fn find_most_similar(&self, needle: &Embedding) -> usize {
@@ -96,6 +101,29 @@ impl Embeddings {
             .unwrap();
         pos_answer
     }
+
+    pub fn write(&self, write: &mut impl Write) -> Result<(), io::Error> {
+        let mut buf = [0u8; EMBEDDING_SIZE * size_of::<f32>()];
+        for embedding in &self.embeddings {
+            embedding.write_to_bytes(&mut buf);
+            write.write_all(&buf)?;
+        }
+        write.flush()?;
+        Ok(())
+    }
+
+    /// Read n embeddings from reader
+    pub fn read_n(&mut self, read: &mut impl BufRead, n: usize) -> Result<(), io::Error> {
+        self.embeddings.clear();
+        let mut buf = [0u8; EMBEDDING_SIZE * size_of::<f32>()];
+        for _ in 0..n {
+            read.read_exact(&mut buf)?;
+            let mut embedding = Embedding::new();
+            embedding.read_from_bytes(&buf);
+            self.embeddings.push(embedding)
+        }
+        Ok(())
+    }
 }
 
 impl Default for Embeddings {
@@ -106,6 +134,8 @@ impl Default for Embeddings {
 
 #[cfg(test)]
 mod tests {
+    use std::io::Cursor;
+
     use super::*;
 
     #[test]
@@ -114,8 +144,21 @@ mod tests {
         let mut buf = [0u8; EMBEDDING_SIZE * size_of::<f32>()];
         embedding.write_to_bytes(&mut buf);
         let mut loaded = Embedding::new();
-        loaded.load_from_bytes(&buf);
+        loaded.read_from_bytes(&buf);
 
         assert_eq!(embedding, loaded)
+    }
+
+    #[test]
+    fn multiple_embedding_to_and_fro_bytes() {
+        let embedding = Embedding::try_from_slice(&(0..128).map(|i| i as f32).collect::<Vec<_>>()).unwrap();
+        let embeddings = Embeddings::from_vec(vec![embedding, embedding]);
+        let mut buf = Vec::new();
+        embeddings.write(&mut buf).unwrap();
+
+        let mut loaded = Embeddings::new();
+        loaded.read_n(&mut Cursor::new(buf), 2).unwrap();
+
+        assert_eq!(embeddings, loaded)
     }
 }
