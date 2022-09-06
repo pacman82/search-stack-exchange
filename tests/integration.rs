@@ -43,7 +43,6 @@ async fn find_best_question() {
     let mut reader = PostReader::new(posts).unwrap();
     while let Some(post) = reader.next_post().unwrap() {
         if let Post::Question { title, .. } = post {
-            println!("{title}");
             titles.push(title);
         }
     }

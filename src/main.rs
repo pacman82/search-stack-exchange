@@ -1,4 +1,12 @@
+use clap::Parser;
+
+#[derive(Parser)]
+#[clap(version)]
+struct Cli {
+
+}
+
 fn main() {
 
-    println!("Hello, world!");
+    let _opt = Cli::parse();
 }
