@@ -1,5 +1,8 @@
-use aleph_alpha_client::{Client, Prompt, SemanticRepresentation, TaskSemanticEmbedding};
+use aleph_alpha_client::{
+    cosine_similarity, Client, Prompt, SemanticRepresentation, TaskSemanticEmbedding,
+};
 use lazy_static::lazy_static;
+use ordered_float::NotNan;
 use search_stack_exchange::{Post, PostReader};
 
 lazy_static! {
@@ -27,7 +30,7 @@ fn count_all_questions_in_3d_printing() {
 }
 
 #[tokio::test]
-async fn embed_all_questions_in_small_posts() {
+async fn find_best_question() {
     // Given
     let client = Client::new(&AA_API_TOKEN).unwrap();
     let posts = SMALL_POSTS;
@@ -45,9 +48,9 @@ async fn embed_all_questions_in_small_posts() {
         }
     }
     let mut title_embeddings = Vec::new();
-    for title in titles {
+    for title in &titles {
         let embedding_task = TaskSemanticEmbedding {
-            prompt: Prompt::from_text(&title),
+            prompt: Prompt::from_text(title),
             representation: SemanticRepresentation::Symmetric,
             compress_to_size: Some(128),
         };
@@ -57,6 +60,25 @@ async fn embed_all_questions_in_small_posts() {
             .unwrap();
         title_embeddings.push(task_output.embedding);
     }
+    let embed_question = TaskSemanticEmbedding {
+        prompt: Prompt::from_text(question),
+        representation: SemanticRepresentation::Symmetric,
+        compress_to_size: Some(128),
+    };
+    let question = &client
+        .execute("luminous-base", &embed_question)
+        .await
+        .unwrap()
+        .embedding;
+
+    let (pos_answer, _similarity) = title_embeddings
+        .iter()
+        .map(|embedding| NotNan::new(cosine_similarity(embedding, question)).unwrap())
+        .enumerate()
+        .max_by_key(|(_index, similarity)| *similarity)
+        .unwrap();
+    let best_question = &titles[pos_answer];
 
     // Then
+    assert_eq!("Is 3D printing safe for your health?", best_question);
 }
