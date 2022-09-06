@@ -3,7 +3,7 @@ use aleph_alpha_client::{
 };
 use lazy_static::lazy_static;
 use ordered_float::NotNan;
-use search_stack_exchange::{Post, PostReader};
+use search_stack_exchange::{Embeddings, Post, PostReader};
 
 lazy_static! {
     static ref AA_API_TOKEN: String = std::env::var("AA_API_TOKEN")
@@ -46,7 +46,7 @@ async fn find_best_question() {
             titles.push(title);
         }
     }
-    let mut title_embeddings = Vec::new();
+    let mut title_embeddings = Embeddings::new();
     for title in &titles {
         let embedding_task = TaskSemanticEmbedding {
             prompt: Prompt::from_text(title),
@@ -57,7 +57,9 @@ async fn find_best_question() {
             .execute("luminous-base", &embedding_task)
             .await
             .unwrap();
-        title_embeddings.push(task_output.embedding);
+        title_embeddings
+            .embeddings
+            .push(task_output.embedding.try_into().unwrap());
     }
     let embed_question = TaskSemanticEmbedding {
         prompt: Prompt::from_text(question),
@@ -71,6 +73,7 @@ async fn find_best_question() {
         .embedding;
 
     let (pos_answer, _similarity) = title_embeddings
+        .embeddings
         .iter()
         .map(|embedding| NotNan::new(cosine_similarity(embedding, question)).unwrap())
         .enumerate()
