@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 
 use aleph_alpha_client::{Client, Prompt, SemanticRepresentation, TaskSemanticEmbedding};
 use anyhow::Error;
@@ -43,7 +43,7 @@ async fn main() -> Result<(), Error> {
 
             let api_token = std::env::var("AA_API_TOKEN")?;
             let client = Client::new(&api_token)?;
-            let titles = extract_titles(posts_xml)?;
+            let titles = extract_titles(&posts_xml)?;
             let title_embeddings =
                 Embeddings::from_texts(&client, titles.iter().map(|s| s.as_str())).await?;
 
@@ -69,7 +69,7 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn extract_titles(posts_xml: PathBuf) -> Result<Vec<String>, Error> {
+fn extract_titles(posts_xml: &Path) -> Result<Vec<String>, Error> {
     let mut titles = Vec::new();
     let mut reader = PostReader::new(posts_xml)?;
     while let Some(post) = reader.next_post()? {

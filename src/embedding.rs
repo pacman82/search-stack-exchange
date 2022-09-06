@@ -1,4 +1,4 @@
-use std::convert::TryInto;
+use std::{convert::TryInto, mem::size_of};
 
 use aleph_alpha_client::{
     cosine_similarity, Client, Prompt, SemanticRepresentation, TaskSemanticEmbedding,
@@ -10,9 +10,14 @@ pub const EMBEDDING_SIZE: usize = 128;
 
 /// Embeddings encode meaning. They are high dimensional vectors those angles are used to determine
 /// similarity of different prompts.
+#[derive(Debug, PartialEq)]
 pub struct Embedding(pub [f32; EMBEDDING_SIZE]);
 
 impl Embedding {
+    pub fn new() -> Self {
+        Self([0f32; EMBEDDING_SIZE])
+    }
+
     /// Constructs an embedding of [`EMBEDDING_SIZE`] from a slice.
     pub fn try_from_slice(slice: &[f32]) -> Result<Self, Error> {
         let array: [f32; EMBEDDING_SIZE] = slice.try_into().map_err(|_| {
@@ -23,6 +28,26 @@ impl Embedding {
 
     pub fn similarity(&self, other: &Embedding) -> f32 {
         cosine_similarity(&self.0, &other.0)
+    }
+
+    /// Write the embedding into a binary buffer.
+    pub fn write_to_bytes(&self, buf: &mut [u8; EMBEDDING_SIZE * size_of::<f32>()]) {
+        for (bytes, float) in buf.chunks_exact_mut(size_of::<f32>()).zip(self.0) {
+            bytes.copy_from_slice(&float.to_le_bytes())
+        }
+    }
+
+    /// Load embedding from a binary buffer.
+    pub fn load_from_bytes(&mut self, buf: &[u8; EMBEDDING_SIZE * size_of::<f32>()]) {
+        for (bytes, float) in buf.chunks_exact(size_of::<f32>()).zip(&mut self.0) {
+            *float = f32::from_le_bytes(bytes.try_into().unwrap());
+        }
+    }
+}
+
+impl Default for Embedding {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -76,5 +101,21 @@ impl Embeddings {
 impl Default for Embeddings {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn embedding_to_and_fro_bytes() {
+        let embedding = Embedding::try_from_slice(&(0..128).map(|i| i as f32).collect::<Vec<_>>()).unwrap();
+        let mut buf = [0u8; EMBEDDING_SIZE * size_of::<f32>()];
+        embedding.write_to_bytes(&mut buf);
+        let mut loaded = Embedding::new();
+        loaded.load_from_bytes(&buf);
+
+        assert_eq!(embedding, loaded)
     }
 }
