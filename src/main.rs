@@ -32,6 +32,10 @@ struct TitleOpt {
     posts_xml: PathBuf,
     /// Your question you want to ask
     question: String,
+    /// Token for the Aleph Alpha API. You can see your token if you go to your profile at
+    /// <https://app.aleph-alpha.com>.
+    #[clap(long, short = 't', env = "AA_API_TOKEN", hide_env_values = true)]
+    token: String,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -43,10 +47,10 @@ async fn main() -> Result<(), Error> {
             let TitleOpt {
                 posts_xml,
                 question,
+                token,
             } = title_opt;
 
-            let api_token = std::env::var("AA_API_TOKEN")?;
-            let client = Client::new(&api_token)?;
+            let client = Client::new(&token)?;
             let titles = extract_titles(&posts_xml)?;
 
             // Load embeddings if already calculated.
