@@ -63,7 +63,8 @@ async fn main() -> Result<(), Error> {
             } else {
                 eprintln!("Generate embeddings");
                 // Generate embeddings
-                let embeddings = Embeddings::from_texts(&client, titles.iter().map(|s| s.as_str())).await?;
+                let embeddings =
+                    Embeddings::from_texts(&client, titles.iter().map(|s| s.as_str())).await?;
                 // Save them for the next time
                 let mut file = File::create(embedding_path)?;
                 embeddings.write(&mut file)?;

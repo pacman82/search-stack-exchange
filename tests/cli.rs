@@ -1,6 +1,6 @@
 use assert_cmd::Command;
-use predicates::str::contains;
 use lazy_static::lazy_static;
+use predicates::str::contains;
 
 lazy_static! {
     static ref AA_API_TOKEN: String = std::env::var("AA_API_TOKEN")

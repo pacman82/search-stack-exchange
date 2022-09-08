@@ -1,6 +1,6 @@
 use aleph_alpha_client::{Client, Prompt, SemanticRepresentation, TaskSemanticEmbedding};
 use lazy_static::lazy_static;
-use search_stack_exchange::{Embeddings, Post, PostReader, Embedding};
+use search_stack_exchange::{Embedding, Embeddings, Post, PostReader};
 
 lazy_static! {
     static ref AA_API_TOKEN: String = std::env::var("AA_API_TOKEN")

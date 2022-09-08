@@ -30,16 +30,12 @@ impl PostReader {
         // Read declaration: E.g.: <?xml version="1.0" encoding="utf-8"?>
         let event = Self::extract_event(&mut xml_reader, &mut buf)?;
         if !matches!(event, Event::Decl(_)) {
-            return Err(Error::InvalidXMLFormat(
-                "Expected XML Declaration".to_owned(),
-            ));
+            return Err(Error::invalid_xml("Expected XML Declaration"));
         }
         // Read start of rows collection; e.g. <posts>
         let event = Self::extract_event(&mut xml_reader, &mut buf)?;
         if !matches!(event, Event::Start(_)) {
-            return Err(Error::InvalidXMLFormat(
-                "Expected XML Start Rows".to_owned(),
-            ));
+            return Err(Error::invalid_xml("Expected XML Start Rows"));
         }
         Ok(Self { buf, xml_reader })
     }
@@ -53,7 +49,7 @@ impl PostReader {
         match result {
             Ok(event) => Ok(event),
             Err(quick_xml::Error::Io(cause)) => Err(Error::ReadXmlFile(cause)),
-            Err(error) => Err(Error::MalformedXML(error.to_string())),
+            Err(error) => Err(Error::MalformedXml(error.to_string())),
         }
     }
 
@@ -66,16 +62,14 @@ impl PostReader {
                     let post = Post::from_attributes(bytes.attributes())?;
                     Ok(Some(post))
                 } else {
-                    Err(Error::InvalidXMLFormat(format!(
+                    Err(Error::invalid_xml(format!(
                         "Unexpected tagname in row: {}",
                         String::from_utf8_lossy(name.as_ref())
                     )))
                 }
             }
             Event::End(_) => Ok(None),
-            _ => Err(Error::InvalidXMLFormat(
-                "Unexpected tag. Expected row.".to_owned(),
-            )),
+            _ => Err(Error::invalid_xml("Unexpected tag. Expected row.")),
         }
     }
 }
@@ -102,21 +96,17 @@ impl Post {
                 _ => (),
             }
         }
-        let post_type_id = post_type_id
-            .ok_or_else(|| Error::InvalidXMLFormat("Missing post_type_id in Post".to_owned()))?;
+        let post_type_id =
+            post_type_id.ok_or_else(|| Error::invalid_xml("Missing post_type_id in Post"))?;
         let post = match post_type_id.as_ref() {
             b"1" => {
-                let id =
-                    id.ok_or_else(|| Error::InvalidXMLFormat("Missing id in Post".to_owned()))?;
+                let id = id.ok_or_else(|| Error::invalid_xml("Missing id in Post"))?;
                 let (id, _) = u64::from_radix_10(&id);
-                let title = title.ok_or_else(|| {
-                    Error::InvalidXMLFormat("Missing title in Question".to_owned())
-                })?;
+                let title = title.ok_or_else(|| Error::invalid_xml("Missing title in Question"))?;
                 Post::Question {
                     id,
-                    title: String::from_utf8(title.to_vec()).map_err(|_| {
-                        Error::InvalidXMLFormat("Expected UTF-8 encoding".to_owned())
-                    })?,
+                    title: String::from_utf8(title.to_vec())
+                        .map_err(|_| Error::invalid_xml("Expected UTF-8 encoding"))?,
                 }
             }
             _ => Post::Other,
@@ -127,6 +117,6 @@ impl Post {
 
 impl From<AttrError> for Error {
     fn from(source: AttrError) -> Self {
-        Error::MalformedXML(source.to_string())
+        Error::MalformedXml(source.to_string())
     }
 }
