@@ -12,7 +12,7 @@ fn best_question() {
     let assert = Command::cargo_bin("search-stack-exchange")
         .unwrap()
         .args(&[
-            "title",
+            "question",
             "--token",
             &AA_API_TOKEN,
             "tests/small-posts.xml",
