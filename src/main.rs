@@ -20,7 +20,7 @@ struct Cli {
 #[derive(Parser)]
 enum Command {
     /// The question with the title which fits your query best
-    Title {
+    Question {
         #[clap(flatten)]
         title_opt: TitleOpt,
     },
@@ -43,7 +43,7 @@ async fn main() -> Result<(), Error> {
     let opt = Cli::parse();
 
     match opt.command {
-        Command::Title { title_opt } => {
+        Command::Question { title_opt } => {
             let TitleOpt {
                 posts_xml,
                 question,

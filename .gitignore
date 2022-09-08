@@ -4,3 +4,6 @@
 
 # Cached embeddings
 *.emb
+
+# Downloaded data
+*.xml
