@@ -7,15 +7,11 @@ lazy_static! {
         .expect("AA_API_TOKEN environment variable must be specified to run tests.");
 }
 
-/// Path to full 3D printing posts.xml
-// const THREE_D_PRINTING_POSTS: &str = "./tests/3dprinting.Posts.xml";
 /// Smaller sample for quicker tests
 const SMALL_POSTS: &str = "./tests/small-posts.xml";
 
 #[test]
-fn count_all_questions_in_3d_printing() {
-    // Parse Post.xml from 3dprinting stackexchange dump. We choose the 3d printing dump, because it
-    // is one of the smaller ones.
+fn count_all_questions_in_small_posts() {
     let mut reader = PostReader::new(SMALL_POSTS).unwrap();
     let mut num_questions = 0;
     while let Some(post) = reader.next_post().unwrap() {
@@ -24,6 +20,22 @@ fn count_all_questions_in_3d_printing() {
         }
     }
     assert_eq!(3, num_questions);
+}
+
+#[test]
+fn list_all_questions_in_small_posts() {
+    let mut reader = PostReader::new(SMALL_POSTS).unwrap();
+    let mut questions = Vec::new();
+    while let Some(post) = reader.next_post().unwrap() {
+        if let Post::Question { body: question, .. } = post {
+            questions.push(question)
+        }
+    }
+
+    assert_eq!([
+        "<p>When I've printed an object I've had to choose between high resolution and quick prints.  What techniques or technologies can I use or deploy to speed up my high resolution prints?</p>\n",
+        "<p>I would like to buy a 3D printer, but I'm concerned about the health risks that are associated with its operation. Some groups of scientists say it can be <a href=\"http://www.techworld.com/news/personal-tech/scientists-warn-of-3d-printing-health-effects-as-tech-hits-high-street-3460992/\">harmful</a> for humans.</p>\n\n<p>What do I need to consider before buying a 3D printer if I care about my health? Are there any safe printers?</p>\n",
+        "<p>I know the minimum layer height will effect how detailed of an item you can print and the amount of time it takes to print something, but is it necessary to have an extremely low minimum layer height if you plan to print only larger objects?</p>\n"].as_slice(), &questions)
 }
 
 #[tokio::test]

@@ -10,7 +10,7 @@ anyhow = "1.0.64"
 atoi = "1.0.0"
 clap = { version = "3.2.20", features = ["derive", "env"] }
 tokio = { version = "1.15.0", features = ["rt", "macros"] }
-quick-xml = "0.24.0"
+quick-xml = { version = "0.24.0", features = [] }
 thiserror = "1.0.32"
 ordered-float = "3.0.0"
 serde_json = "1.0.85"
