@@ -75,7 +75,11 @@ impl PostReader {
 }
 
 pub enum Post {
-    Question { id: u64, title: String },
+    Question {
+        id: u64,
+        title: String,
+        body: String,
+    },
     Other,
 }
 
@@ -86,13 +90,27 @@ impl Post {
         let mut id = None;
         let mut post_type_id = None;
         let mut title = None;
+        let mut question = None;
 
         for attr in attributes {
             let attr = attr?;
             match attr.key.into_inner() {
                 b"Id" => id = Some(attr.value),
                 b"PostTypeId" => post_type_id = Some(attr.value),
-                b"Title" => title = Some(attr.value.clone()),
+                b"Title" => {
+                    title = Some(
+                        attr.unescape_value()
+                            .map_err(|_| Error::invalid_xml("Error unmasking attribute"))?
+                            .to_string(),
+                    )
+                }
+                b"Body" => {
+                    question = Some(
+                        attr.unescape_value()
+                            .map_err(|_| Error::invalid_xml("Error unmasking attribute"))?
+                            .to_string(),
+                    )
+                }
                 _ => (),
             }
         }
@@ -103,11 +121,9 @@ impl Post {
                 let id = id.ok_or_else(|| Error::invalid_xml("Missing id in Post"))?;
                 let (id, _) = u64::from_radix_10(&id);
                 let title = title.ok_or_else(|| Error::invalid_xml("Missing title in Question"))?;
-                Post::Question {
-                    id,
-                    title: String::from_utf8(title.to_vec())
-                        .map_err(|_| Error::invalid_xml("Expected UTF-8 encoding"))?,
-                }
+                let body =
+                    question.ok_or_else(|| Error::invalid_xml("Missing question in Question"))?;
+                Post::Question { id, title, body }
             }
             _ => Post::Other,
         };
