@@ -80,6 +80,11 @@ pub enum Post {
         title: String,
         body: String,
     },
+    Answer {
+        id: u64,
+        parent_id: u64,
+        body: String,
+    },
     Other,
 }
 
@@ -88,15 +93,17 @@ impl Post {
         attributes: impl Iterator<Item = Result<Attribute<'a>, AttrError>>,
     ) -> Result<Self, Error> {
         let mut id = None;
+        let mut parent_id = None;
         let mut post_type_id = None;
         let mut title = None;
-        let mut question = None;
+        let mut body = None;
 
         for attr in attributes {
             let attr = attr?;
             match attr.key.into_inner() {
                 b"Id" => id = Some(attr.value),
                 b"PostTypeId" => post_type_id = Some(attr.value),
+                b"ParentId" => parent_id = Some(attr.value.clone()),
                 b"Title" => {
                     title = Some(
                         attr.unescape_value()
@@ -105,7 +112,7 @@ impl Post {
                     )
                 }
                 b"Body" => {
-                    question = Some(
+                    body = Some(
                         attr.unescape_value()
                             .map_err(|_| Error::invalid_xml("Error unmasking attribute"))?
                             .to_string(),
@@ -121,9 +128,21 @@ impl Post {
                 let id = id.ok_or_else(|| Error::invalid_xml("Missing id in Post"))?;
                 let (id, _) = u64::from_radix_10(&id);
                 let title = title.ok_or_else(|| Error::invalid_xml("Missing title in Question"))?;
-                let body =
-                    question.ok_or_else(|| Error::invalid_xml("Missing question in Question"))?;
+                let body = body.ok_or_else(|| Error::invalid_xml("Missing body in Question"))?;
                 Post::Question { id, title, body }
+            }
+            b"2" => {
+                let id = id.ok_or_else(|| Error::invalid_xml("Missing id in Post"))?;
+                let (id, _) = u64::from_radix_10(&id);
+                let parent_id =
+                    parent_id.ok_or_else(|| Error::invalid_xml("Missing parent_id in Answer"))?;
+                let (parent_id, _) = u64::from_radix_10(&parent_id);
+                let body = body.ok_or_else(|| Error::invalid_xml("Missing body in Answer"))?;
+                Post::Answer {
+                    id,
+                    parent_id,
+                    body,
+                }
             }
             _ => Post::Other,
         };

@@ -76,3 +76,15 @@ async fn find_best_question() {
     // Then
     assert_eq!("Is 3D printing safe for your health?", best_question);
 }
+
+#[test]
+fn count_all_answerss_in_small_posts() {
+    let mut reader = PostReader::new(SMALL_POSTS).unwrap();
+    let mut num_answers = 0;
+    while let Some(post) = reader.next_post().unwrap() {
+        if matches!(post, Post::Answer { .. }) {
+            num_answers += 1;
+        }
+    }
+    assert_eq!(7, num_answers);
+}
