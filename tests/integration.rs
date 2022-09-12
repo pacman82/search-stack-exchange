@@ -78,7 +78,7 @@ async fn find_best_question() {
 }
 
 #[test]
-fn count_all_answerss_in_small_posts() {
+fn count_all_answers_in_small_posts() {
     let mut reader = PostReader::new(SMALL_POSTS).unwrap();
     let mut num_answers = 0;
     while let Some(post) = reader.next_post().unwrap() {
