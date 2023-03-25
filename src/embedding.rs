@@ -93,7 +93,10 @@ impl Embeddings {
             };
             let mut embedding = None;
             while embedding.is_none() {
-                embedding = match client.execute(Self::MODEL, &task).await {
+                embedding = match client
+                    .execute(Self::MODEL, &task, &Default::default())
+                    .await
+                {
                     Ok(output) => Some(output.embedding),
                     Err(error) => match error {
                         aleph_alpha_client::Error::TooManyRequests

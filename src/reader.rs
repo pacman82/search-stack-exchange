@@ -6,7 +6,7 @@ use quick_xml::{
     },
     Reader,
 };
-use std::{fs::File, io::BufReader, path::Path};
+use std::{fs::File, io::BufReader, path::Path, sync::Arc};
 
 use crate::Error;
 
@@ -22,7 +22,7 @@ impl PostReader {
     pub fn new(path: impl AsRef<Path>) -> Result<Self, Error> {
         let mut buf = Vec::new();
 
-        let file = File::open(path).map_err(Error::ReadXmlFile)?;
+        let file = File::open(path).map_err(|cause| Error::ReadXmlFile(Arc::new(cause)))?;
         let reader = BufReader::new(file);
         let mut xml_reader = Reader::from_reader(reader);
         // Avoid generating empty text events

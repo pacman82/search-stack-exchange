@@ -1,11 +1,11 @@
-use std::io;
+use std::{io, sync::Arc};
 
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Io error reading xml file")]
-    ReadXmlFile(#[source] io::Error),
+    ReadXmlFile(#[source] Arc<io::Error>),
     #[error("Invalid xml format: {0}")]
     InvalidXml(String),
     #[error("XML input is malformed")]

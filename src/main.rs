@@ -77,7 +77,7 @@ async fn main() -> Result<(), Error> {
                 compress_to_size: Some(128),
             };
             let question_embedding = &client
-                .execute("luminous-base", &embed_question)
+                .execute("luminous-base", &embed_question, &Default::default())
                 .await
                 .unwrap()
                 .embedding;

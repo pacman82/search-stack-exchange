@@ -1,10 +1,18 @@
 use aleph_alpha_client::{Client, Prompt, SemanticRepresentation, TaskSemanticEmbedding};
+use dotenv::dotenv;
 use lazy_static::lazy_static;
 use search_stack_exchange::{Embedding, Embeddings, Post, PostReader};
 
 lazy_static! {
-    static ref AA_API_TOKEN: String = std::env::var("AA_API_TOKEN")
-        .expect("AA_API_TOKEN environment variable must be specified to run tests.");
+    static ref AA_API_TOKEN: String = {
+        // Use `.env` file if it exists
+        let _ = dotenv();
+        std::env::var("AA_API_TOKEN")
+            .expect(
+                "AA_API_TOKEN environment variable must be specified to run tests. You may also \
+                create a .env file containing the AA_API_TOKEN.
+            ")
+    };
 }
 
 /// Smaller sample for quicker tests
@@ -64,7 +72,7 @@ async fn find_best_question() {
         compress_to_size: Some(128),
     };
     let question = &client
-        .execute("luminous-base", &embed_question)
+        .execute("luminous-base", &embed_question, &Default::default())
         .await
         .unwrap()
         .embedding;
