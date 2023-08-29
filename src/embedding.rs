@@ -62,7 +62,6 @@ pub struct Embeddings {
 }
 
 impl Embeddings {
-    const MODEL: &'static str = "luminous-base";
 
     pub fn new() -> Self {
         Self {
@@ -94,7 +93,7 @@ impl Embeddings {
             let mut embedding = None;
             while embedding.is_none() {
                 embedding = match client
-                    .execute(Self::MODEL, &task, &Default::default())
+                    .semantic_embedding(&task, &Default::default())
                     .await
                 {
                     Ok(output) => Some(output.embedding),

@@ -72,7 +72,7 @@ async fn find_best_question() {
         compress_to_size: Some(128),
     };
     let question = &client
-        .execute("luminous-base", &embed_question, &Default::default())
+        .semantic_embedding(&embed_question, &Default::default())
         .await
         .unwrap()
         .embedding;
